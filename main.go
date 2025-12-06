@@ -6,12 +6,13 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 const MSG_File = "messages.txt"
 
 func main() {
-	readMessages(MSG_File)
+	readLines(MSG_File)
 }
 
 func failOnErr(err error, msg string) {
@@ -21,7 +22,7 @@ func failOnErr(err error, msg string) {
 	}
 }
 
-func readMessages(fileName string) {
+func readLines(fileName string) {
 	fmt.Printf("Reading data from %s\n", fileName)
 	fmt.Println("=====================================")
 
@@ -30,14 +31,25 @@ func readMessages(fileName string) {
 	defer f.Close()
 
 	buf := make([]byte, 8)
+	line := ""
 	for {
 		n, err := f.Read(buf)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				if line != "" {
+					fmt.Printf("read: %s\n", line)
+				}
 				break
 			}
 			failOnErr(err, fmt.Sprintf("Read failed:\n%v\n", err))
 		}
-		fmt.Printf("read: %s\n", buf[:n])
+
+		line += string(buf[:n])
+		lines := strings.Split(line, "\n")
+		if len(lines) > 1 {
+			fmt.Printf("read: %s\n", lines[0])
+			line = lines[1]
+			continue
+		}
 	}
 }
