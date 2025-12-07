@@ -5,29 +5,57 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"strings"
 )
 
 const MSG_File = "messages.txt"
+const PORT = "42069"
+const SERVER = "127.0.0.1"
 
 func main() {
 	// readLines(MSG_File)
 	_ = readLines
 
-	f, err := os.Open(MSG_File)
-	failOnErr(err, fmt.Sprintf("failed to open file: %s", MSG_File))
-	defer f.Close()
-	ch := getLinesChannel(f)
-	for line := range ch {
-		fmt.Printf("read: %s\n", line)
+	// f, err := os.Open(MSG_File)
+	// failOnErr(err, fmt.Sprintf("failed to open file: %s", MSG_File))
+	// defer f.Close()
+	// ch := getLinesChannel(f)
+	// for line := range ch {
+	// 	fmt.Printf("read: %s\n", line)
+	// }
+
+	runServer()
+
+}
+
+func runServer() {
+	address := fmt.Sprintf("%s:%s", SERVER, PORT)
+	listener, err := net.Listen("tcp", address)
+	failOnErr(err, fmt.Sprintf("failed to open: %s", address))
+	defer listener.Close()
+	fmt.Printf("Listening on: %s\n", listener.Addr())
+
+	for {
+		conn, err := listener.Accept()
+		failOnErr(err, "Accept() failed")
+		fmt.Println("connection accepted")
+
+		ch := getLinesChannel(conn)
+		for line := range ch {
+			fmt.Println(line)
+		}
+
+		conn.Close()
+		fmt.Println("connection closed")
 	}
 }
 
 func failOnErr(err error, msg string) {
 	if err != nil {
 		// panic(err)
-		log.Fatal(msg)
+		log.Fatal(msg, "\n\t", err)
 	}
 }
 
