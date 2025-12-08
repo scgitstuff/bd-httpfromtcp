@@ -30,12 +30,19 @@ func main() {
 
 }
 
-func runServer() {
+func connect() net.Listener {
 	address := fmt.Sprintf("%s:%s", SERVER, PORT)
 	listener, err := net.Listen("tcp", address)
 	failOnErr(err, fmt.Sprintf("failed to open: %s", address))
-	defer listener.Close()
 	fmt.Printf("Listening on: %s\n", listener.Addr())
+
+	return listener
+}
+
+func runServer() {
+
+	listener := connect()
+	defer listener.Close()
 
 	for {
 		conn, err := listener.Accept()
