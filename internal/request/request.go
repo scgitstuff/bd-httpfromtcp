@@ -1,6 +1,7 @@
 package request
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -17,18 +18,37 @@ type RequestLine struct {
 	Method        string
 }
 
+const CR_LF = "\r\n"
+const BUF_SIZE = 8
+
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	all, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("ReadAll() failed")
+
+	// the instructions want us to use a byte array and fuck with indexes pretending
+	// we are optimizing stuff, while still reading the whole thing into memory
+	// I am accumulating a string until EOF then calling the existing code
+	buf := make([]byte, BUF_SIZE)
+	inputString := ""
+
+	for {
+		n, err := reader.Read(buf)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
+		inputString += string(buf[:n])
+		// only read first line since that is all we parse?
+		// if strings.Contains(inputString, CR_LF) {
+		// 	break
+		// }
 	}
 
-	s := string(all)
-	lines := strings.Split(s, "\r\n")
+	lines := strings.Split(inputString, CR_LF)
+	inputString = ""
 	if len(lines) == 0 {
 		return nil, fmt.Errorf("RequestFromReader() bad request format")
 	}
-
 	x, err := parseRequestLine(lines[0])
 
 	return x, err
