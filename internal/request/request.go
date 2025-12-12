@@ -23,9 +23,10 @@ const BUF_SIZE = 8
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
 
-	// the instructions want us to use a byte array and fuck with indexes pretending
-	// we are optimizing stuff, while still reading the whole thing into memory
+	// TODO: need to fix this
 	// I am accumulating a string until EOF then calling the existing code
+	// the parse function is supposed to keep a minimal buffer and detect the
+	// start of the request line and buffer only that line, throw away the rest
 	buf := make([]byte, BUF_SIZE)
 	inputString := ""
 
