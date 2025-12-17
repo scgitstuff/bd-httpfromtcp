@@ -1,36 +1,41 @@
 package headers
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 )
 
+const CR_LF = "\r\n"
+
 type Headers map[string]string
 
 func NewHeaders() Headers {
-	return make(Headers)
+	return map[string]string{}
 }
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
-
-	s := string(data)
-	x := strings.Index(s, ":")
-	if x == -1 {
-		return 0, true, fmt.Errorf("':' char not found")
+	idx := bytes.Index(data, []byte(CR_LF))
+	if idx == -1 {
+		return 0, false, nil
 	}
-	left := s[:x]
-	if left[len(left)-1:] == " " {
-		return 0, true, fmt.Errorf("field-name is invalid, space before ':'")
+	if idx == 0 {
+		// the empty line
+		// headers are done, consume the CRLF
+		return 2, true, nil
 	}
-	right := s[x+1:]
-	left = strings.TrimSpace(left)
-	right = strings.TrimSpace(right)
-	// fmt.Printf("\n****** '%s' : '%s'\n", left, right)
 
-	// TODO: basic string parse done
-	// add check for CRLF
+	parts := bytes.SplitN(data[:idx], []byte(":"), 2)
+	key := string(parts[0])
 
-	h[left] = right
+	if key != strings.TrimRight(key, " ") {
+		return 0, false, fmt.Errorf("invalid header name: %s", key)
+	}
 
-	return 0, true, nil
+	value := bytes.TrimSpace(parts[1])
+	key = strings.TrimSpace(key)
+
+	h[key] = string(value)
+
+	return idx + 2, false, nil
 }
