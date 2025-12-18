@@ -64,4 +64,14 @@ func TestHeadersParse(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
+
+	// Test: duplicate header
+	headers = map[string]string{"host": "localhost:11111"}
+	data = []byte("Host: localhost:22222\r\n\r\n")
+	n, done, err = headers.Parse(data)
+	require.NoError(t, err)
+	require.NotNil(t, headers)
+	assert.Equal(t, "localhost:11111,localhost:22222", headers["host"])
+	assert.Equal(t, 23, n)
+	assert.False(t, done)
 }

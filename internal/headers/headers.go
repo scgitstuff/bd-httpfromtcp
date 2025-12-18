@@ -51,6 +51,12 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 func (h Headers) Set(key, value string) {
 	key = strings.ToLower(key)
+
+	v, ok := h[key]
+	if ok {
+		value = v + "," + value
+	}
+
 	h[key] = value
 }
 
@@ -61,7 +67,7 @@ func (h Headers) Get(key string) string {
 
 func isValidKey(key []byte) bool {
 	for _, c := range key {
-		if c >= 'a' && c <= 'z' {
+		if c >= 'a' && c <= 'z' || c >= '0' && c <= '9' {
 			continue
 		}
 
