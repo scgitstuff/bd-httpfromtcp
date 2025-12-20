@@ -32,6 +32,23 @@ const (
 const CR_LF = "\r\n"
 const BUFF_SIZE = 8
 
+func (rl *RequestLine) String() string {
+	s := fmt.Sprintf("Request line:\n- Method: %s\n- Target: %s\n- Version: %s\n",
+		rl.Method, rl.RequestTarget, rl.HttpVersion)
+	return s
+}
+
+func (r *Request) String() string {
+	var h strings.Builder
+	h.WriteString("Headers:\n")
+
+	for k, v := range r.Headers {
+		fmt.Fprintf(&h, "- %s: %s\n", k, v)
+	}
+
+	return r.RequestLine.String() + h.String()
+}
+
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	buf := make([]byte, BUFF_SIZE)
 	readToIndex := 0

@@ -35,10 +35,7 @@ func runServer() {
 
 		r, err := request.RequestFromReader(conn)
 		failOnErr(err, "RequestFromReader() failed")
-		_ = r
-		s := fmt.Sprintf("Request line:\n- Method: %s\n- Target: %s\n- Version: %s",
-			r.RequestLine.Method, r.RequestLine.RequestTarget, r.RequestLine.HttpVersion)
-		fmt.Println(s)
+		fmt.Println(r.String())
 
 		conn.Close()
 		fmt.Println("connection closed")
