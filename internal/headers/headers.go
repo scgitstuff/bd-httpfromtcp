@@ -66,6 +66,10 @@ func (h Headers) Get(key string) string {
 }
 
 func isValidKey(key []byte) bool {
+	if len(key) == 0 {
+		return false
+	}
+
 	for _, c := range key {
 		if c >= 'a' && c <= 'z' || c >= '0' && c <= '9' {
 			continue
