@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"httpfromtcp/internal/headers"
 	"io"
 	"strings"
 )
@@ -11,7 +12,8 @@ import (
 type Request struct {
 	RequestLine RequestLine
 
-	state requestState
+	state   requestState
+	Headers headers.Headers
 }
 
 type RequestLine struct {
