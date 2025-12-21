@@ -13,6 +13,7 @@ type Request struct {
 	RequestLine RequestLine
 	state       requestState
 	Headers     headers.Headers
+	Body        []byte
 }
 
 type RequestLine struct {
@@ -26,6 +27,7 @@ type requestState int
 const (
 	requestStateInitialized requestState = iota
 	requestStateParsingHeaders
+	requestStateParsingBody
 	requestStateDone
 )
 
