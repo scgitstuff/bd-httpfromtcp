@@ -6,14 +6,17 @@ import (
 	"fmt"
 	"httpfromtcp/internal/headers"
 	"io"
+	"strconv"
 	"strings"
 )
 
 type Request struct {
 	RequestLine RequestLine
-	state       requestState
 	Headers     headers.Headers
 	Body        []byte
+
+	state   requestState
+	bodyLen int
 }
 
 type RequestLine struct {
@@ -174,8 +177,40 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 			return 0, err
 		}
 		if isDone {
-			r.state = requestStateDone
+			r.state = requestStateParsingBody
 		}
+		return n, nil
+	case requestStateParsingBody:
+		n := len(data)
+		head, ok := r.Headers.Get("Content-Length")
+		if !ok {
+			r.state = requestStateDone
+			return n, nil
+		}
+		contentLen, err := strconv.Atoi(head)
+		if err != nil {
+			return 0, fmt.Errorf("bad 'Content-Length' header: %s", head)
+		}
+		// not speced; I don't consider it an error, just a useless header
+		// if contentLen <= 0 {
+		// 	r.state = requestStateDone
+		// 	return 0, nil
+		// }
+
+		r.Body = append(r.Body, data...)
+		r.bodyLen = len(r.Body)
+		if r.bodyLen > contentLen {
+			return 0, fmt.Errorf("Body length %d is longer than 'Content-Length' %d",
+				r.bodyLen, contentLen,
+			)
+		}
+		if r.bodyLen == contentLen {
+			r.state = requestStateDone
+			fmt.Println("I eated all the Body data")
+			return n, nil
+		}
+		// TODO: why does this happen twice for each chunk?
+		// fmt.Printf("************************%s\n", r.Body)
 		return n, nil
 	case requestStateDone:
 		return 0, fmt.Errorf("error: trying to read data in a done state")
