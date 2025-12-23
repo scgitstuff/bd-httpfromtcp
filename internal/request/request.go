@@ -44,14 +44,16 @@ func (rl *RequestLine) String() string {
 }
 
 func (r *Request) String() string {
-	var h strings.Builder
-	h.WriteString("Headers:\n")
+	var stuff strings.Builder
+	stuff.WriteString("Headers:\n")
 
 	for k, v := range r.Headers {
-		fmt.Fprintf(&h, "- %s: %s\n", k, v)
+		fmt.Fprintf(&stuff, "- %s: %s\n", k, v)
 	}
 
-	return r.RequestLine.String() + h.String()
+	fmt.Fprintf(&stuff, "Body:\n%s\n", r.Body)
+
+	return r.RequestLine.String() + stuff.String()
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
