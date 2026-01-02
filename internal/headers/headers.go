@@ -15,6 +15,16 @@ func NewHeaders() Headers {
 	return map[string]string{}
 }
 
+func (h Headers) String() string {
+	var stuff strings.Builder
+
+	for k, v := range h {
+		fmt.Fprintf(&stuff, "%s: %s\r\n", k, v)
+	}
+
+	return stuff.String()
+}
+
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	idx := bytes.Index(data, []byte(CR_LF))
 	if idx == -1 {
