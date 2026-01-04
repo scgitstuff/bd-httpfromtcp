@@ -1,7 +1,9 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
+	"httpfromtcp/internal/request"
 	"httpfromtcp/internal/response"
 	"log"
 	"net"
@@ -11,11 +13,12 @@ import (
 const SERVER = "127.0.0.1"
 
 type Server struct {
-	listener net.Listener
-	closed   atomic.Bool
+	listener    net.Listener
+	isClosed    atomic.Bool
+	handlerFunc Handler
 }
 
-func Serve(port int) (*Server, error) {
+func Serve(port int, handlerFunc Handler) (*Server, error) {
 
 	address := fmt.Sprintf("%s:%d", SERVER, port)
 	listener, err := net.Listen("tcp", address)
@@ -25,7 +28,8 @@ func Serve(port int) (*Server, error) {
 	fmt.Printf("Server listening on: %s\n", listener.Addr())
 
 	server := Server{
-		listener: listener,
+		listener:    listener,
+		handlerFunc: handlerFunc,
 	}
 
 	go server.listen()
@@ -34,7 +38,7 @@ func Serve(port int) (*Server, error) {
 }
 
 func (s *Server) Close() error {
-	s.closed.Store(true)
+	s.isClosed.Store(true)
 	if s.listener == nil {
 		return nil
 	}
@@ -49,7 +53,7 @@ func (s *Server) listen() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
-			if s.closed.Load() {
+			if s.isClosed.Load() {
 				return
 			}
 			log.Printf("Error accepting connection: %v", err)
@@ -57,7 +61,7 @@ func (s *Server) listen() {
 		}
 
 		// fmt.Println("Server connection accepted")
-		s.handle(conn)
+		s.handle2(conn)
 	}
 
 }
@@ -71,6 +75,36 @@ func (s *Server) handle(conn net.Conn) {
 	h := response.GetDefaultHeaders(0)
 	err = response.WriteHeaders(conn, h)
 	failOnErr(err, "**********WriteHeaders() fail")
+}
+
+func (s *Server) handle2(conn net.Conn) {
+	defer conn.Close()
+
+	r, err := request.RequestFromReader(conn)
+	failOnErr(err, "RequestFromReader() failed")
+	// fmt.Println("**************************************************")
+	// fmt.Println(r.String())
+	// fmt.Println("**************************************************")
+
+	var body bytes.Buffer
+	handlerErr := s.handlerFunc(&body, r)
+	if handlerErr != nil {
+		conn.Write([]byte(handlerErr.String()))
+		return
+	}
+	// fmt.Println("**************************************************")
+	// fmt.Println(body.String())
+	// fmt.Println("**************************************************")
+
+	err = response.WriteStatusLine(conn, response.GOOD)
+	failOnErr(err, "**********WriteStatusLine() fail")
+
+	h := response.GetDefaultHeaders(0)
+	err = response.WriteHeaders(conn, h)
+	failOnErr(err, "**********WriteHeaders() fail")
+
+	err = response.WriteBody(conn, body.Bytes())
+	failOnErr(err, "**********WriteBody() fail")
 }
 
 func failOnErr(err error, msg string) {

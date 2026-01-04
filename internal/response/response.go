@@ -31,3 +31,10 @@ func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
 
 	return err
 }
+
+func WriteBody(w io.Writer, body []byte) error {
+	_, err := w.Write(body)
+	// _, err = w.Write([]byte("\r\n"))
+
+	return err
+}
