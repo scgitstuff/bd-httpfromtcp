@@ -28,22 +28,23 @@ func main() {
 }
 
 func doStuff(w io.Writer, req *request.Request) *server.HandlerError {
-
-	// fmt.Println("**************************************************")
-	// fmt.Println(req.String())
-	// fmt.Println("**************************************************")
 	out := server.HandlerError{}
 
-	// TODO: I'll get back to finish this
 	if req.RequestLine.RequestTarget == "/yourproblem" {
-		out.StatusCode = response.NO
-		out.Message = "400 Your problem is not my problem\n"
+		out.StatusCode = response.StatusCodeBadRequest
+		out.Message = "Your problem is not my problem\n"
 		return &out
 	}
 
-	// w.Write([]byte("STUFF"))
+	if req.RequestLine.RequestTarget == "/myproblem" {
+		out.StatusCode = response.StatusCodeInternalServerError
+		out.Message = "Woopsie, my bad\n"
+		return &out
+	}
 
-	return &server.HandlerError{StatusCode: response.BAD, Message: "This should not happen"}
+	w.Write([]byte("All good, frfr\n"))
+
+	return nil
 }
 
 func failOnErr(err error, msg string) {

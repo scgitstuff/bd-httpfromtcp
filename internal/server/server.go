@@ -49,7 +49,6 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) listen() {
-
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -61,50 +60,50 @@ func (s *Server) listen() {
 		}
 
 		// fmt.Println("Server connection accepted")
-		s.handle2(conn)
+		s.handle(conn)
 	}
+}
 
+func (s *Server) handleOld(conn net.Conn) {
+	defer conn.Close()
+
+	err := response.WriteStatusLine(conn, response.StatusCodeSuccess)
+	failOnErr(err, "**********WriteStatusLine() fail")
+
+	h := response.GetDefaultHeaders(5)
+	err = response.WriteHeaders(conn, h)
+	failOnErr(err, "**********WriteHeaders() fail")
+
+	n, err := conn.Write([]byte("TEST\n"))
+	fmt.Printf("BODY %d\n", n)
+	failOnErr(err, "**********Write() fail")
 }
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
 
-	err := response.WriteStatusLine(conn, response.GOOD)
-	failOnErr(err, "**********WriteStatusLine() fail")
-
-	h := response.GetDefaultHeaders(0)
-	err = response.WriteHeaders(conn, h)
-	failOnErr(err, "**********WriteHeaders() fail")
-}
-
-func (s *Server) handle2(conn net.Conn) {
-	defer conn.Close()
-
 	r, err := request.RequestFromReader(conn)
-	failOnErr(err, "RequestFromReader() failed")
-	// fmt.Println("**************************************************")
-	// fmt.Println(r.String())
-	// fmt.Println("**************************************************")
-
-	var body bytes.Buffer
-	handlerErr := s.handlerFunc(&body, r)
-	if handlerErr != nil {
-		conn.Write([]byte(handlerErr.String()))
+	if err != nil {
+		hErr := &HandlerError{
+			StatusCode: response.StatusCodeBadRequest,
+			Message:    err.Error(),
+		}
+		hErr.Write(conn)
 		return
 	}
-	// fmt.Println("**************************************************")
-	// fmt.Println(body.String())
-	// fmt.Println("**************************************************")
 
-	err = response.WriteStatusLine(conn, response.GOOD)
-	failOnErr(err, "**********WriteStatusLine() fail")
+	body := bytes.NewBuffer([]byte{})
+	handlerErr := s.handlerFunc(body, r)
+	if handlerErr != nil {
+		handlerErr.Write(conn)
+		return
+	}
 
-	h := response.GetDefaultHeaders(0)
-	err = response.WriteHeaders(conn, h)
-	failOnErr(err, "**********WriteHeaders() fail")
-
-	err = response.WriteBody(conn, body.Bytes())
-	failOnErr(err, "**********WriteBody() fail")
+	b := body.Bytes()
+	h := response.GetDefaultHeaders(len(b))
+	response.WriteStatusLine(conn, response.StatusCodeSuccess)
+	response.WriteHeaders(conn, h)
+	response.WriteBody(conn, b)
 }
 
 func failOnErr(err error, msg string) {
