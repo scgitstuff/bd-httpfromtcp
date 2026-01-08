@@ -2,7 +2,6 @@ package response
 
 import (
 	"fmt"
-	"io"
 )
 
 type StatusCode int
@@ -24,14 +23,4 @@ func getStatusLine(statusCode StatusCode) []byte {
 		reasonPhrase = "Internal Server Error"
 	}
 	return []byte(fmt.Sprintf("HTTP/1.1 %d %s\r\n", statusCode, reasonPhrase))
-}
-
-func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
-	_, err := w.Write(getStatusLine(statusCode))
-	return err
-}
-
-func WriteBody(w io.Writer, body []byte) error {
-	_, err := w.Write(body)
-	return err
 }

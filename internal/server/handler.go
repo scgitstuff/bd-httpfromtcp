@@ -12,6 +12,7 @@ type HandlerError struct {
 	Message    string
 }
 
+// TODO change sig, move handler code into httpserver
 type Handler func(w io.Writer, req *request.Request) *HandlerError
 
 func (he *HandlerError) String() string {
@@ -19,9 +20,10 @@ func (he *HandlerError) String() string {
 }
 
 func (he HandlerError) Write(w io.Writer) {
-	response.WriteStatusLine(w, he.StatusCode)
+	writer := response.NewWriter(w)
+	writer.WriteStatusLine(he.StatusCode)
 	messageBytes := []byte(he.Message)
 	headers := response.GetDefaultHeaders(len(messageBytes))
-	response.WriteHeaders(w, headers)
+	writer.WriteHeaders(headers)
 	w.Write(messageBytes)
 }

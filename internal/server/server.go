@@ -64,21 +64,6 @@ func (s *Server) listen() {
 	}
 }
 
-func (s *Server) handleOld(conn net.Conn) {
-	defer conn.Close()
-
-	err := response.WriteStatusLine(conn, response.StatusCodeSuccess)
-	failOnErr(err, "**********WriteStatusLine() fail")
-
-	h := response.GetDefaultHeaders(5)
-	err = response.WriteHeaders(conn, h)
-	failOnErr(err, "**********WriteHeaders() fail")
-
-	n, err := conn.Write([]byte("TEST\n"))
-	fmt.Printf("BODY %d\n", n)
-	failOnErr(err, "**********Write() fail")
-}
-
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
 
@@ -101,9 +86,10 @@ func (s *Server) handle(conn net.Conn) {
 
 	b := body.Bytes()
 	h := response.GetDefaultHeaders(len(b))
-	response.WriteStatusLine(conn, response.StatusCodeSuccess)
-	response.WriteHeaders(conn, h)
-	response.WriteBody(conn, b)
+	writer := response.NewWriter(conn)
+	writer.WriteStatusLine(response.StatusCodeSuccess)
+	writer.WriteHeaders(h)
+	writer.WriteBody(b)
 }
 
 func failOnErr(err error, msg string) {
