@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"httpfromtcp/internal/request"
 	"httpfromtcp/internal/response"
@@ -66,30 +65,18 @@ func (s *Server) listen() {
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
+	w := response.NewWriter(conn)
 
 	r, err := request.RequestFromReader(conn)
 	if err != nil {
-		hErr := &HandlerError{
-			StatusCode: response.StatusCodeBadRequest,
-			Message:    err.Error(),
-		}
-		hErr.Write(conn)
+		w.WriteStatusLine(response.StatusCodeBadRequest)
+		body := []byte(fmt.Sprintf("Error parsing request: %v", err))
+		w.WriteHeaders(response.GetDefaultHeaders(len(body)))
+		w.WriteBody(body)
 		return
 	}
 
-	body := bytes.NewBuffer([]byte{})
-	handlerErr := s.handlerFunc(body, r)
-	if handlerErr != nil {
-		handlerErr.Write(conn)
-		return
-	}
-
-	b := body.Bytes()
-	h := response.GetDefaultHeaders(len(b))
-	writer := response.NewWriter(conn)
-	writer.WriteStatusLine(response.StatusCodeSuccess)
-	writer.WriteHeaders(h)
-	writer.WriteBody(b)
+	s.handlerFunc(w, r)
 }
 
 func failOnErr(err error, msg string) {
