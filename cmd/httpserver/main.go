@@ -1,19 +1,23 @@
 package main
 
 import (
+	"fmt"
 	"httpfromtcp/internal/request"
 	"httpfromtcp/internal/response"
 	"httpfromtcp/internal/server"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
 const PORT = 42069
 
 func main() {
-	server, err := server.Serve(PORT, doStuffHTML)
+	server, err := server.Serve(PORT, doStuff)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
@@ -24,6 +28,16 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 	log.Println("Server gracefully stopped")
+}
+
+func doStuff(w *response.Writer, req *request.Request) {
+
+	if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/") {
+		respondCHUNK(w, strings.TrimPrefix(req.RequestLine.RequestTarget, "/httpbin/"))
+		return
+	}
+
+	handleHTML(w, req)
 }
 
 func respondHTML(w *response.Writer, statusCode response.StatusCode, html string) {
@@ -43,69 +57,48 @@ func respondTEXT(w *response.Writer, statusCode response.StatusCode, body string
 	w.WriteBody(b)
 }
 
-func doStuff(w *response.Writer, req *request.Request) {
+func respondCHUNK(w *response.Writer, path string) {
+	base := "https://httpbin.org"
+	url := base + "/" + path
+	const CHUNK = 1024
+	buff := make([]byte, CHUNK)
 
-	if req.RequestLine.RequestTarget == "/yourproblem" {
-		respondTEXT(w, response.StatusCodeBadRequest,
-			"Your problem is not my problem\n")
-		return
+	// fmt.Println(url)
+
+	resp, err := http.Get(url)
+
+	err = w.WriteChunkedStart()
+	if err != nil {
+		fmt.Printf("WriteChunkedStart: bad stuff happened:\n\t%v\n", err)
 	}
 
-	if req.RequestLine.RequestTarget == "/myproblem" {
-		respondTEXT(w, response.StatusCodeInternalServerError,
-			"Woopsie, my bad\n")
-		return
+	for {
+		n, err := resp.Body.Read(buff)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			fmt.Printf("respondCHUNK: read error:\n\t%v\n", err)
+			break
+		}
+		// fmt.Printf("respondCHUNK: read: %d\n", n)
+
+		if n <= 0 {
+			break
+		}
+
+		x, err := w.WriteChunkedBody(buff[:n])
+		if err != nil {
+			fmt.Printf("WriteChunkedBody: error:\n\t%v\n", err)
+		}
+		_ = x
+		// fmt.Printf("respondCHUNK: write: %d\n", x)
 	}
 
-	respondTEXT(w, response.StatusCodeSuccess, "All good, frfr\n")
-}
-
-func doStuffHTML(w *response.Writer, req *request.Request) {
-
-	if req.RequestLine.RequestTarget == "/yourproblem" {
-		s := `
-<html>
-  <head>
-    <title>400 Bad Request</title>
-  </head>
-  <body>
-    <h1>Bad Request</h1>
-    <p>Your request honestly kinda sucked.</p>
-  </body>
-</html>
-`
-		respondHTML(w, response.StatusCodeBadRequest, s)
-		return
+	w.WriteChunkedBodyDone()
+	if err != nil {
+		fmt.Printf("WriteChunkedBodyDone: bad stuff happened:\n\t%v\n", err)
 	}
-
-	if req.RequestLine.RequestTarget == "/myproblem" {
-		s := `
-<html>
-  <head>
-    <title>500 Internal Server Error</title>
-  </head>
-  <body>
-    <h1>Internal Server Error</h1>
-    <p>Okay, you know what? This one is on me.</p>
-  </body>
-</html>
-`
-		respondHTML(w, response.StatusCodeInternalServerError, s)
-		return
-	}
-
-	s := `
-<html>
-  <head>
-    <title>200 OK</title>
-  </head>
-  <body>
-    <h1>Success!</h1>
-    <p>Your request was an absolute banger.</p>
-  </body>
-</html>
-`
-	respondHTML(w, response.StatusCodeSuccess, s)
 }
 
 func failOnErr(err error, msg string) {

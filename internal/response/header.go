@@ -8,9 +8,9 @@ import (
 func GetDefaultHeaders(contentLen int) headers.Headers {
 	h := headers.NewHeaders()
 
-	h.Set("Content-Length", strconv.Itoa(contentLen))
-	h.Set("Connection", "close")
-	h.Set("Content-Type", "text/plain")
+	h.Add("Content-Length", strconv.Itoa(contentLen))
+	h.Add("Connection", "close")
+	h.Add("Content-Type", "text/plain")
 
 	return h
 }

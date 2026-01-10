@@ -54,12 +54,12 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	value = strings.TrimSpace(value)
 
-	h.Set(key, value)
+	h.Add(key, value)
 
 	return n, false, nil
 }
 
-func (h Headers) Set(key, value string) {
+func (h Headers) Add(key, value string) {
 	key = strings.ToLower(key)
 
 	v, ok := h[key]
@@ -79,6 +79,11 @@ func (h Headers) Get(key string) (string, bool) {
 	key = strings.ToLower(key)
 	v, ok := h[key]
 	return v, ok
+}
+
+func (h Headers) Delete(key string) {
+	key = strings.ToLower(key)
+	delete(h, key)
 }
 
 func isValidKey(key []byte) bool {

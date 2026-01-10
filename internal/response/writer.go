@@ -15,16 +15,23 @@ func NewWriter(w io.Writer) *Writer {
 
 func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	_, err := w.ioW.Write(getStatusLine(statusCode))
+
 	return err
 }
 
 func (w *Writer) WriteHeaders(headers headers.Headers) error {
-	w.ioW.Write([]byte(headers.String()))
-	_, err := w.ioW.Write([]byte("\r\n"))
+	_, err := w.ioW.Write([]byte(headers.String()))
+	if err != nil {
+		return err
+	}
+
+	_, err = w.ioW.Write([]byte("\r\n"))
+
 	return err
 }
 
 func (w *Writer) WriteBody(body []byte) (int, error) {
 	n, err := w.ioW.Write(body)
+
 	return n, err
 }
